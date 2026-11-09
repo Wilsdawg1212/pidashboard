@@ -1,0 +1,36 @@
+# PiDash: the apps the dashboard shows and lets you control.
+#
+# After editing this file, re-run   bash install.sh
+# (it updates which services the dashboard is allowed to start and stop).
+#
+# Fields:
+#   name          what the card says
+#   description   one short line
+#   units         systemd units the Start/Stop button controls, in start order
+#   measure       extra units whose memory/CPU count toward this app but that
+#                 aren't started or stopped directly (e.g. a job a timer runs)
+#   ram_mb        roughly how much memory it needs; the dashboard warns you
+#                 before starting it if the Pi has less than this free
+#   link          optional "Open" link; {host} becomes the Pi's address
+#   confirm_stop  ask "are you sure?" before stopping
+
+apps:
+  - id: minecraft
+    name: Minecraft server
+    description: Java server on port 25565
+    units: [minecraft.service]
+    ram_mb: 2048
+    confirm_stop: true
+
+  - id: dealpi
+    name: DealPi
+    description: Deal tracker (web page + collector every 10 min)
+    units: [dealpi-web.service, dealpi-collect.timer]
+    measure: [dealpi-collect.service]
+    ram_mb: 600
+    link: "http://{host}:8080"
+
+web:
+  host: 0.0.0.0
+  port: 8000
+  refresh_seconds: 3

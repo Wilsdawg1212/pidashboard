@@ -1,0 +1,34 @@
+# Minecraft server as a systemd service, so PiDash can start/stop it.
+#
+# 1. Edit the four CHANGE ME lines below.
+# 2. sudo cp systemd/minecraft.service.example /etc/systemd/system/minecraft.service
+# 3. Stop the server if it's running the old way (type "stop" in its console).
+# 4. sudo systemctl daemon-reload && sudo systemctl enable --now minecraft
+#
+# Stopping sends the server SIGTERM, which makes vanilla and Paper servers save
+# the world and shut down cleanly (the same as typing "stop").
+
+[Unit]
+Description=Minecraft server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# CHANGE ME: your Pi username
+User=pi
+# CHANGE ME: the folder that holds server.jar, server.properties and the world
+WorkingDirectory=/home/pi/minecraft
+# CHANGE ME: memory (-Xmx) and the jar's file name.
+# On a 4 GB Pi with DealPi running, -Xmx2G is a good ceiling; on 8 GB, -Xmx4G.
+ExecStart=/usr/bin/java -Xms1G -Xmx2G -jar server.jar nogui
+# CHANGE ME if java lives elsewhere (check with: which java)
+
+Restart=on-failure
+RestartSec=20
+# give it time to save the world before systemd gives up
+TimeoutStopSec=120
+SuccessExitStatus=0 1 130 143
+Nice=-2
+
+[Install]
+WantedBy=multi-user.target

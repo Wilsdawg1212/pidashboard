@@ -1,0 +1,14 @@
+[Unit]
+Description=PiDash control dashboard
+After=network-online.target
+
+[Service]
+User=__USER__
+WorkingDirectory=__DIR__
+EnvironmentFile=-__DIR__/.env
+ExecStart=__DIR__/.venv/bin/python -m pidash.app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

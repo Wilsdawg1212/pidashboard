@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PiDash</title>
+<style>
+  :root {
+    --bg: #f5f5f2; --panel: #fff; --ink: #1c1c1e; --muted: #6c6c72; --line: #e3e2dd;
+    --green: #12805c; --green-soft: #e1f3eb; --amber: #a15c00; --amber-soft: #fdf0dc;
+    --red: #b42318; --red-soft: #fde8e6; --gray-soft: #ececea; --bar: #12805c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #121214; --panel: #1c1c1f; --ink: #ededf0; --muted: #9b9ba3; --line: #2c2c31;
+            --green: #4cd39c; --green-soft: #16302a; --amber: #f2b45c; --amber-soft: #3a2b14;
+            --red: #f38b81; --red-soft: #3b1d1a; --gray-soft: #2a2a2e; --bar: #4cd39c; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
+  main { max-width: 1000px; margin: 0 auto; padding: 18px; }
+  h1 { font-size: 20px; margin: 0; }
+  h1 span { color: var(--muted); font-weight: 400; font-size: 14px; margin-left: 8px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 26px 0 10px; }
+  .top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-top: 14px; }
+  .tile, .app { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+  .tile { padding: 12px 14px; }
+  .tile .k { font-size: 12px; color: var(--muted); }
+  .tile .v { font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .tile .s { font-size: 12px; color: var(--muted); }
+  .bar { height: 6px; background: var(--gray-soft); border-radius: 99px; overflow: hidden; margin-top: 8px; }
+  .bar i { display: block; height: 100%; background: var(--bar); border-radius: 99px; transition: width .4s; }
+  .bar.warn i { background: var(--amber); } .bar.hot i { background: var(--red); }
+  .stack { display: flex; height: 10px; border-radius: 99px; overflow: hidden; background: var(--gray-soft); margin-top: 10px; }
+  .stack i { display: block; height: 100%; transition: width .4s; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .legend b { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  .apps { display: grid; gap: 12px; }
+  .app { padding: 14px 16px; display: grid; grid-template-columns: 1fr auto; gap: 10px 16px; align-items: center; }
+  .app .name { font-weight: 650; font-size: 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .app .desc { color: var(--muted); font-size: 13px; }
+  .pill { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 99px; }
+  .pill.running { background: var(--green-soft); color: var(--green); }
+  .pill.stopped { background: var(--gray-soft); color: var(--muted); }
+  .pill.partial, .pill.missing { background: var(--amber-soft); color: var(--amber); }
+  .pill.failed { background: var(--red-soft); color: var(--red); }
+  .stats { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 13px; color: var(--muted); grid-column: 1 / -1; }
+  .stats b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+  button, .btn { font: inherit; font-size: 14px; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--line);
+                 background: var(--panel); color: var(--ink); cursor: pointer; text-decoration: none; }
+  button.start { background: var(--green); border-color: var(--green); color: #fff; }
+  button.stop { color: var(--red); border-color: var(--red); }
+  @media (prefers-color-scheme: dark) { button.start { color: #0d1f18; } }
+  button:disabled { opacity: .5; cursor: wait; }
+  label.boot { font-size: 13px; color: var(--muted); display: flex; gap: 6px; align-items: center; cursor: pointer; }
+  details { grid-column: 1 / -1; font-size: 13px; }
+  details summary { cursor: pointer; color: var(--muted); }
+  details table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  details td { padding: 4px 6px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  .note { grid-column: 1 / -1; font-size: 13px; color: var(--amber); }
+  .toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: var(--ink); color: var(--bg);
+           padding: 10px 16px; border-radius: 10px; font-size: 14px; max-width: 90vw; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  .muted { color: var(--muted); }
+  @media (max-width: 600px) { .app { grid-template-columns: 1fr; } .controls { justify-content: flex-start; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <h1>PiDash<span id="host"></span></h1>
+    <span class="muted" style="font-size:13px" id="updated">Loading…</span>
+  </div>
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="tile" style="margin-top:12px">
+    <div class="k">Memory by app</div>
+    <div class="stack" id="stack"></div>
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <h2>Apps</h2>
+  <div class="apps" id="apps"></div>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const REFRESH = {{ refresh }} * 1000;
+const COLORS = ["#12805c", "#2f6fd6", "#b8590a", "#8a3fd1", "#c2345a", "#0f8a99"];
+let data = null, busy = new Set();
+
+const gb = b => (b / 1024 ** 3).toFixed(b >= 10 * 1024 ** 3 ? 0 : 1) + " GB";
+const mb = b => b >= 1024 ** 3 ? gb(b) : Math.round(b / 1024 ** 2) + " MB";
+function dur(s) {
+  s = Math.max(0, Math.round(s));
+  if (s < 60) return s + "s";
+  if (s < 3600) return Math.round(s / 60) + "m";
+  if (s < 86400) return Math.floor(s / 3600) + "h " + Math.round((s % 3600) / 60) + "m";
+  return Math.floor(s / 86400) + "d " + Math.floor((s % 86400) / 3600) + "h";
+}
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(msg) { const t = document.getElementById("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 3500); }
+const level = p => p >= 90 ? "hot" : p >= 75 ? "warn" : "";
+
+function tile(k, v, s, pct) {
+  return `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div>` +
+    (pct == null ? "" : `<div class="bar ${level(pct)}"><i style="width:${Math.min(100, pct)}%"></i></div>`) + `</div>`;
+}
+
+function render() {
+  const s = data.system, now = data.time;
+  document.getElementById("host").textContent = s.hostname;
+  document.getElementById("updated").textContent = "Updated " + new Date(now * 1000).toLocaleTimeString();
+  const memPct = s.mem_used / s.mem_total * 100, diskPct = s.disk_used / s.disk_total * 100;
+  document.getElementById("tiles").innerHTML =
+    tile("Memory", gb(s.mem_used) + " / " + gb(s.mem_total), mb(s.mem_available) + " free" + (s.swap_used > 50e6 ? " · swap " + mb(s.swap_used) : ""), memPct) +
+    tile("CPU", Math.round(s.cpu_percent) + "%", s.cpu_count + " cores · load " + s.load[0], s.cpu_percent) +
+    tile("Temperature", s.temp_c == null ? "—" : s.temp_c.toFixed(0) + "°C", s.temp_c >= 80 ? "throttling likely" : s.temp_c >= 70 ? "warm" : "normal", s.temp_c == null ? null : s.temp_c / 85 * 100) +
+    tile("Storage", gb(s.disk_used) + " / " + gb(s.disk_total), "up " + dur(s.uptime), diskPct);
+
+  // memory stack: each app, then everything else
+  let parts = data.apps.filter(a => a.mem_bytes > 0).map((a, i) => ({name: a.name, b: a.mem_bytes, c: COLORS[i % COLORS.length]}));
+  const appsTotal = parts.reduce((t, p) => t + p.b, 0);
+  parts.push({name: "Everything else", b: Math.max(0, s.mem_used - appsTotal), c: "#9a9aa0"});
+  document.getElementById("stack").innerHTML = parts.map(p => `<i style="width:${p.b / s.mem_total * 100}%;background:${p.c}" title="${esc(p.name)}: ${mb(p.b)}"></i>`).join("");
+  document.getElementById("legend").innerHTML = parts.map(p => `<span><b style="background:${p.c}"></b>${esc(p.name)} ${mb(p.b)}</span>`).join("") +
+    `<span><b style="background:var(--gray-soft)"></b>Free ${mb(s.mem_available)}</span>`;
+
+  document.getElementById("apps").innerHTML = data.apps.map(a => {
+    const on = a.state === "running" || a.state === "partial", isBusy = busy.has(a.id);
+    const label = {running: "Running", stopped: "Stopped", partial: "Partly running", failed: "Failed", missing: "Not installed"}[a.state];
+    const stats = on ? [
+      `RAM <b>${mb(a.mem_bytes)}</b>`, `CPU <b>${a.cpu_percent}%</b>`,
+      a.since ? `up <b>${dur(now - a.since)}</b>` : "",
+      a.next_run ? `next run in <b>${dur(a.next_run - now)}</b>` : "",
+    ] : [a.ram_mb ? `needs about <b>${mb(a.ram_mb * 1024 ** 2)}</b>` : ""];
+    const rows = a.units.map(u => `<tr><td>${esc(u.unit)}</td><td>${esc(u.active)}${u.sub ? " (" + esc(u.sub) + ")" : ""}</td>` +
+      `<td>${esc(u.enabled)}</td><td>${u.mem_bytes ? mb(u.mem_bytes) : ""}</td><td>${u.pids ? u.pids + " proc" : ""}</td></tr>`).join("");
+    return `<div class="app">
+      <div><div class="name">${esc(a.name)} <span class="pill ${a.state}">${label}</span></div>
+           <div class="desc">${esc(a.description)}</div></div>
+      <div class="controls">
+        ${a.link && on ? `<a class="btn" href="${esc(a.link)}" target="_blank" rel="noopener">Open</a>` : ""}
+        ${on ? `<button class="btn" onclick="act('${a.id}','restart')" ${isBusy ? "disabled" : ""}>Restart</button>
+                <button class="stop" onclick="act('${a.id}','stop')" ${isBusy ? "disabled" : ""}>${isBusy ? "Working…" : "Stop"}</button>`
+             : `<button class="start" onclick="act('${a.id}','start')" ${isBusy || a.state === "missing" ? "disabled" : ""}>${isBusy ? "Working…" : "Start"}</button>`}
+        <label class="boot" title="Start automatically when the Pi turns on">
+          <input type="checkbox" ${a.on_boot ? "checked" : ""} ${isBusy || a.state === "missing" ? "disabled" : ""}
+                 onchange="act('${a.id}', this.checked ? 'enable' : 'disable')"> On boot</label>
+      </div>
+      <div class="stats">${stats.filter(Boolean).join("")}</div>
+      ${a.missing.length ? `<div class="note">Service not found: ${a.missing.map(esc).join(", ")}. See the README to set it up.</div>` : ""}
+      <details><summary>Details</summary><table>${rows}</table></details>
+    </div>`;
+  }).join("");
+}
+
+async function refresh() {
+  try {
+    const r = await fetch("/api/status");
+    if (!r.ok) throw new Error(r.status);
+    data = await r.json();
+    render();
+  } catch (e) {
+    document.getElementById("updated").textContent = "Can't reach the Pi (" + e.message + ")";
+  }
+}
+
+async function act(id, action) {
+  const a = data.apps.find(x => x.id === id);
+  if (action === "stop" && a.confirm_stop && !confirm(`Stop ${a.name}? Anyone connected will be disconnected.`)) return render();
+  if (action === "start" && a.ram_mb && data.system.mem_available < a.ram_mb * 1024 ** 2 &&
+      !confirm(`Only ${mb(data.system.mem_available)} of memory is free, and ${a.name} needs about ${mb(a.ram_mb * 1024 ** 2)}. ` +
+               `Starting it anyway could make the Pi slow or crash other apps. Start anyway?`)) return render();
+  busy.add(id); render();
+  try {
+    const r = await fetch(`/api/apps/${id}/${action}`, {method: "POST"});
+    const j = await r.json();
+    if (!j.ok) toast("Couldn't " + action + " " + a.name + ": " + j.error);
+    else toast({start: "Started ", stop: "Stopped ", restart: "Restarted ", enable: "Will start on boot: ", disable: "Won't start on boot: "}[action] + a.name);
+  } catch (e) { toast("Request failed: " + e.message); }
+  busy.delete(id);
+  await refresh();
+}
+
+refresh();
+setInterval(() => { if (!document.hidden) refresh(); }, REFRESH);
+</script>
+</body>
+</html>
