@@ -15,12 +15,12 @@ Wants=network-online.target
 
 [Service]
 # CHANGE ME: your Pi username
-User=pi
+User=wide5
 # CHANGE ME: the folder that holds server.jar, server.properties and the world
-WorkingDirectory=/home/pi/minecraft
+WorkingDirectory=/home/wide5/minecraft-server
 # CHANGE ME: memory (-Xmx) and the jar's file name.
 # On a 4 GB Pi with DealPi running, -Xmx2G is a good ceiling; on 8 GB, -Xmx4G.
-ExecStart=/usr/bin/java -Xms1G -Xmx2G -jar server.jar nogui
+ExecStart=/home/wide5/.sdkman/candidates/java/current/bin/java -Xms512M -Xmx1G -jar paper.jar nogui
 # CHANGE ME if java lives elsewhere (check with: which java)
 
 Restart=on-failure
